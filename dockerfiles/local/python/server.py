@@ -2,6 +2,7 @@ import datetime
 import os
 import sys
 import uuid
+from json.decoder import JSONDecodeError
 
 import bottle
 from bottle import route, run, template, request
@@ -14,7 +15,20 @@ def flush_log():
     from function import function
     end = datetime.datetime.now()
     # FIXME: measurements?
-    ret = function.handler(request.json)
+
+    try:
+        # The following assignment could raise a JSONDecodeError
+        data = request.json
+
+        # Error if empty JSON content or Content-Type is not application/json
+        if not data:
+            ret = 'Error: Empty JSON content or invalid Content-Type in request.'
+
+        # If no parsing error is found, the data can be recieved by the handler
+        else:
+            ret = function.handler(data)
+    except JSONDecodeError as err:
+        ret = 'Error: Unable to decode JSON content in request.'
 
     return {
         'begin': begin.strftime('%s.%f'),
